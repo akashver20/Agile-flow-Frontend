@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -13,11 +13,12 @@ import { Stage, Project } from '../../../core/models/project.model';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { PopupService } from '../../../shared/services/popup.service';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
+import { RichTextEditorComponent } from '../../../shared/components/rich-text-editor/rich-text-editor.component';
 
 @Component({
     selector: 'app-ticket-details',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, ButtonComponent, BadgeComponent, AvatarComponent, TextFieldModule, NavbarComponent],
+    imports: [CommonModule, ReactiveFormsModule, ButtonComponent, BadgeComponent, AvatarComponent, TextFieldModule, NavbarComponent, RichTextEditorComponent],
     template: `
     <div class="ticket-details-page">
       <app-navbar
@@ -95,41 +96,90 @@ import { NavbarComponent } from '../../../shared/components/navbar/navbar.compon
             </div>
           </div>
 
-          <div class="activity-section">
-            <h3 class="section-title">Activity Timeline</h3>
-            <div class="timeline" *ngIf="activities().length > 0; else noActivities">
-              <div *ngFor="let activity of activities(); let i = index" class="timeline-item animate-fade-in-up" [style.animation-delay]="i * 0.1 + 's'">
-                <div class="timeline-marker"></div>
-                <div class="timeline-content">
-                  <div class="timeline-header">
-                    <span class="timeline-user">{{ activity.user.fullName }}</span>
-                    <span class="timeline-time">{{ activity.createdAt | date:'MMM d, y, h:mm a' }}</span>
+          <div class="tabs-container">
+            <div class="tabs-nav">
+              <button 
+                type="button" 
+                class="tab-btn" 
+                [class.active]="activeTab() === 'comments'"
+                (click)="activeTab.set('comments')">
+                Comments ({{ commentActivities().length }})
+              </button>
+              <button 
+                type="button" 
+                class="tab-btn" 
+                [class.active]="activeTab() === 'timeline'"
+                (click)="activeTab.set('timeline')">
+                Timeline
+              </button>
+            </div>
+
+            <!-- COMMENTS TAB -->
+            <div class="tab-content" *ngIf="activeTab() === 'comments'">
+              <div class="comment-composer">
+                <app-rich-text-editor
+                  [showSubmit]="true"
+                  submitLabel="Post Comment"
+                  (onSubmit)="addComment($event)">
+                </app-rich-text-editor>
+              </div>
+
+              <div class="comments-list" *ngIf="commentActivities().length > 0; else noComments">
+                <div *ngFor="let comment of commentActivities(); let i = index" class="comment-item animate-fade-in-up" [style.animation-delay]="i * 0.1 + 's'">
+                  <div class="comment-header">
+                    <span class="comment-user">{{ comment.user.fullName }}</span>
+                    <span class="comment-time">{{ comment.createdAt | date:'MMM d, y, h:mm a' }}</span>
                   </div>
-                  <div class="timeline-action">
-                    <ng-container [ngSwitch]="activity.actionType">
-                      <span *ngSwitchCase="'CREATED'">created this ticket.</span>
-                      <span *ngSwitchCase="'UPDATED_STAGE'">moved ticket to <strong>{{ getStageName(activity.newValue!) }}</strong>.</span>
-                      <span *ngSwitchCase="'UPDATED_PRIORITY'">changed priority to <strong>{{ activity.newValue }}</strong>.</span>
-                      <span *ngSwitchCase="'UPDATED_STORY_POINTS'">updated story points to <strong>{{ activity.newValue }}</strong>.</span>
-                      <span *ngSwitchCase="'UPDATED_TITLE'">updated the title.</span>
-                      <span *ngSwitchCase="'UPDATED_DESCRIPTION'">updated the description.</span>
-                      <span *ngSwitchCase="'UPDATED_ASSIGNEE'">
-                        <ng-container *ngIf="activity.newValue; else unassigned">
-                          assigned this to <strong>{{ getUserName(activity.newValue) }}</strong>.
-                        </ng-container>
-                        <ng-template #unassigned>unassigned this ticket.</ng-template>
-                      </span>
-                      <span *ngSwitchDefault>updated the ticket.</span>
-                    </ng-container>
+                  <div class="comment-body" [innerHTML]="comment.newValue"></div>
+                </div>
+              </div>
+              <ng-template #noComments>
+                <div class="activity-placeholder">
+                  <p>No comments yet. Be the first to start the discussion!</p>
+                </div>
+              </ng-template>
+            </div>
+
+            <!-- TIMELINE TAB -->
+            <div class="tab-content" *ngIf="activeTab() === 'timeline'">
+              <div class="timeline" *ngIf="historyActivities().length > 0; else noActivities">
+                <div *ngFor="let activity of historyActivities(); let i = index" class="timeline-item animate-fade-in-up" [style.animation-delay]="i * 0.1 + 's'">
+                  <div class="timeline-marker"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span class="timeline-user">{{ activity.user.fullName }}</span>
+                      <span class="timeline-time">{{ activity.createdAt | date:'MMM d, y, h:mm a' }}</span>
+                    </div>
+                    <div class="timeline-action">
+                      <ng-container [ngSwitch]="activity.actionType">
+                        <span *ngSwitchCase="'CREATED'">created this ticket.</span>
+                        <span *ngSwitchCase="'UPDATED_STAGE'">moved ticket to <strong>{{ getStageName(activity.newValue!) }}</strong>.</span>
+                        <span *ngSwitchCase="'UPDATED_PRIORITY'">changed priority to <strong>{{ activity.newValue }}</strong>.</span>
+                        <span *ngSwitchCase="'UPDATED_STORY_POINTS'">updated story points to <strong>{{ activity.newValue }}</strong>.</span>
+                        <span *ngSwitchCase="'UPDATED_TITLE'">updated the title.</span>
+                        <span *ngSwitchCase="'UPDATED_DESCRIPTION'">updated the description.</span>
+                        <span *ngSwitchCase="'UPDATED_ASSIGNEE'">
+                          <ng-container *ngIf="activity.newValue; else unassigned">
+                            assigned this to <strong>{{ getUserName(activity.newValue) }}</strong>.
+                          </ng-container>
+                          <ng-template #unassigned>unassigned this ticket.</ng-template>
+                        </span>
+                        <div *ngSwitchCase="'COMMENT'" class="timeline-comment-card" style="margin-top: 0.5rem;">
+                          <div class="comment-prefix" style="color: var(--color-text-secondary); margin-bottom: 0.25rem;">added a comment:</div>
+                          <div class="comment-body" style="padding: 0.5rem 0.75rem; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.8125rem;" [innerHTML]="activity.newValue"></div>
+                        </div>
+                        <span *ngSwitchDefault>updated the ticket.</span>
+                      </ng-container>
+                    </div>
                   </div>
                 </div>
               </div>
+              <ng-template #noActivities>
+                <div class="activity-placeholder">
+                  <p>No activity yet.</p>
+                </div>
+              </ng-template>
             </div>
-            <ng-template #noActivities>
-              <div class="activity-placeholder">
-                <p>No activity yet.</p>
-              </div>
-            </ng-template>
           </div>
 
           <div class="form-actions">
@@ -238,18 +288,44 @@ import { NavbarComponent } from '../../../shared/components/navbar/navbar.compon
       cursor: pointer;
     }
 
-    .activity-section {
+    .tabs-container {
       margin-top: var(--spacing-xl);
-      padding-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
       border-top: 1px solid var(--color-border);
     }
 
-    .section-title {
-      font-size: 1.125rem;
-      font-weight: 600;
+    .tabs-nav {
+      display: flex;
+      gap: 1.5rem;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 0.5rem 0.25rem;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      top: 1px;
+    }
+
+    .tab-btn:hover {
       color: var(--color-text-primary);
-      margin-bottom: var(--spacing-md);
-      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tab-btn.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    .tab-content {
+      animation: fadeIn 0.3s ease-in-out;
     }
 
     .timeline {
@@ -306,6 +382,56 @@ import { NavbarComponent } from '../../../shared/components/navbar/navbar.compon
       font-weight: 600;
     }
 
+    .comments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .comment-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .comment-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .comment-user {
+      font-weight: 600;
+      color: var(--color-text-primary);
+      font-size: 0.875rem;
+    }
+
+    .comment-time {
+      color: var(--color-text-tertiary);
+      font-size: 0.75rem;
+    }
+
+    .comment-body {
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      color: var(--color-text-primary);
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .comment-body ::ng-deep b, .comment-body ::ng-deep strong { font-weight: 600; }
+    .comment-body ::ng-deep i, .comment-body ::ng-deep em { font-style: italic; }
+    .comment-body ::ng-deep ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .comment-body ::ng-deep ol { list-style-type: decimal; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+
+    .comment-composer {
+      margin-bottom: 1rem;
+    }
+
     .activity-placeholder {
       padding: var(--spacing-xl);
       background-color: var(--color-bg-tertiary);
@@ -337,10 +463,19 @@ import { NavbarComponent } from '../../../shared/components/navbar/navbar.compon
   `]
   })
   export class TicketDetailsComponent implements OnInit {
+    @ViewChild(RichTextEditorComponent) richTextEditor?: RichTextEditorComponent;
+    
     ticketForm: FormGroup;
     project = signal<Project | undefined>(undefined);
     ticket = signal<Ticket | undefined>(undefined);
     activities = signal<TicketActivity[]>([]);
+    
+    // Computed signals for filtering activities
+    commentActivities = computed(() => this.activities().filter(a => a.actionType === 'COMMENT'));
+    historyActivities = computed(() => this.activities());
+
+    activeTab = signal<'comments' | 'timeline'>('comments');
+
     stages = signal<Stage[]>([]);
     members = signal<User[]>([]);
     isLoading = signal(false);
@@ -454,6 +589,25 @@ import { NavbarComponent } from '../../../shared/components/navbar/navbar.compon
           });
         }
       );
+    }
+
+    addComment(htmlText: string): void {
+      if (!htmlText || !htmlText.trim()) return;
+      
+      this.kanbanService.addTicketComment(this.ticketId, htmlText).subscribe({
+        next: (newActivity) => {
+          this.popupService.success('Comment posted');
+          // Update timeline with newest first
+          this.activities.update(current => [newActivity, ...current]);
+          
+          if (this.richTextEditor) {
+            this.richTextEditor.clear();
+          }
+        },
+        error: (err) => {
+          this.popupService.error(err.error?.message || 'Failed to post comment');
+        }
+      });
     }
 
     goBack(): void {

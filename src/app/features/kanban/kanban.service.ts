@@ -92,5 +92,13 @@ export class KanbanService {
                 createdAt: new Date(a.createdAt)
             }))));
     }
+
+    addTicketComment(ticketId: string, text: string): Observable<TicketActivity> {
+        return this.http.post<{ status: string, data: any }>(`${this.apiUrl}/tickets/${ticketId}/activities/comments`, { text })
+            .pipe(map(response => ({
+                ...response.data,
+                createdAt: new Date(response.data.createdAt)
+            })));
+    }
 }
 

@@ -62,6 +62,15 @@ export class ProjectsService {
             })));
     }
 
+    updateProject(id: string, data: any): Observable<Project> {
+        return this.http.put<{ status: string, data: any }>(`${this.apiUrl}/${id}`, data)
+            .pipe(map(response => ({
+                ...response.data,
+                lastUpdated: new Date(response.data.updatedAt),
+                createdAt: new Date(response.data.createdAt)
+            })));
+    }
+
     deleteProject(id: string): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${id}`);
     }

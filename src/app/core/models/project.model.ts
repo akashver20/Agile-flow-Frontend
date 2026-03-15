@@ -12,7 +12,7 @@ export interface Project {
 export interface Stage {
     id: string;
     name: string;
-    order: number;
+    position: number;
 }
 
 export interface CreateProjectData {
