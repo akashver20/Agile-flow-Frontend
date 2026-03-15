@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import './assets/styles/reset.css';
+@import './assets/styles/variables.css';
+@import './assets/styles/utilities.css';
+
+body {
+    font-family: var(--font-family);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    font-size: var(--font-size-base);
+}
+
+* {
+    box-sizing: border-box;
+}
