@@ -7,29 +7,26 @@ import { BadgeComponent } from '../../../shared/components/badge/badge.component
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
 import { KanbanService } from '../kanban.service';
 import { ProjectsService } from '../../projects/projects.service';
-import { Ticket, TicketPriority } from '../../../core/models/ticket.model';
+import { Ticket, TicketPriority, TicketActivity } from '../../../core/models/ticket.model';
 import { User } from '../../../core/models/user.model';
-import { Stage } from '../../../core/models/project.model';
-import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldModule
+import { Stage, Project } from '../../../core/models/project.model';
+import { TextFieldModule } from '@angular/cdk/text-field';
+import { PopupService } from '../../../shared/services/popup.service';
+import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 
 @Component({
     selector: 'app-ticket-details',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, ButtonComponent, BadgeComponent, AvatarComponent, TextFieldModule], // Add TextFieldModule
+    imports: [CommonModule, ReactiveFormsModule, ButtonComponent, BadgeComponent, AvatarComponent, TextFieldModule, NavbarComponent],
     template: `
     <div class="ticket-details-page">
-      <div class="details-container">
-        <div class="details-header">
-          <button class="back-btn" (click)="goBack()">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M12 16L6 10L12 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Back to Board
-          </button>
-          <app-button variant="danger" size="sm" (click)="deleteTicket()">
-            Delete
-          </app-button>
-        </div>
+      <app-navbar
+        [project]="project()"
+        [showBack]="true"
+        (onBack)="goBack()">
+      </app-navbar>
+
+      <div class="details-container animate-fade-in-up" style="opacity: 0; animation-delay: 0.1s">
 
         <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()" class="details-form">
           <div class="form-group">
@@ -99,15 +96,48 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
           </div>
 
           <div class="activity-section">
-            <h3 class="section-title">Activity</h3>
-            <div class="activity-placeholder">
-              <p>Activity timeline coming soon...</p>
+            <h3 class="section-title">Activity Timeline</h3>
+            <div class="timeline" *ngIf="activities().length > 0; else noActivities">
+              <div *ngFor="let activity of activities(); let i = index" class="timeline-item animate-fade-in-up" [style.animation-delay]="i * 0.1 + 's'">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-user">{{ activity.user.fullName }}</span>
+                    <span class="timeline-time">{{ activity.createdAt | date:'MMM d, y, h:mm a' }}</span>
+                  </div>
+                  <div class="timeline-action">
+                    <ng-container [ngSwitch]="activity.actionType">
+                      <span *ngSwitchCase="'CREATED'">created this ticket.</span>
+                      <span *ngSwitchCase="'UPDATED_STAGE'">moved ticket to <strong>{{ getStageName(activity.newValue!) }}</strong>.</span>
+                      <span *ngSwitchCase="'UPDATED_PRIORITY'">changed priority to <strong>{{ activity.newValue }}</strong>.</span>
+                      <span *ngSwitchCase="'UPDATED_STORY_POINTS'">updated story points to <strong>{{ activity.newValue }}</strong>.</span>
+                      <span *ngSwitchCase="'UPDATED_TITLE'">updated the title.</span>
+                      <span *ngSwitchCase="'UPDATED_DESCRIPTION'">updated the description.</span>
+                      <span *ngSwitchCase="'UPDATED_ASSIGNEE'">
+                        <ng-container *ngIf="activity.newValue; else unassigned">
+                          assigned this to <strong>{{ getUserName(activity.newValue) }}</strong>.
+                        </ng-container>
+                        <ng-template #unassigned>unassigned this ticket.</ng-template>
+                      </span>
+                      <span *ngSwitchDefault>updated the ticket.</span>
+                    </ng-container>
+                  </div>
+                </div>
+              </div>
             </div>
+            <ng-template #noActivities>
+              <div class="activity-placeholder">
+                <p>No activity yet.</p>
+              </div>
+            </ng-template>
           </div>
 
           <div class="form-actions">
             <app-button type="button" variant="secondary" (click)="goBack()">
               Cancel
+            </app-button>
+            <app-button variant="danger" size="sm" (click)="deleteTicket()">
+              Delete
             </app-button>
             <app-button type="submit" variant="primary" [disabled]="isLoading()">
               {{ isLoading() ? 'Saving...' : 'Save Changes' }}
@@ -121,16 +151,12 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
     .ticket-details-page {
       min-height: 100vh;
       background-color: var(--color-bg-secondary);
-      padding: var(--spacing-xl);
     }
 
     .details-container {
       max-width: 800px;
       margin: 0 auto;
-      background-color: var(--color-bg-primary);
-      border-radius: var(--radius-lg);
-      padding: var(--spacing-xl);
-      box-shadow: var(--shadow-md);
+      padding: var(--spacing-xl) 1.5rem;
     }
 
     .details-header {
@@ -213,16 +239,71 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
     }
 
     .activity-section {
-      margin-top: var(--spacing-lg);
-      padding-top: var(--spacing-lg);
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-xl);
       border-top: 1px solid var(--color-border);
     }
 
     .section-title {
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-semibold);
+      font-size: 1.125rem;
+      font-weight: 600;
       color: var(--color-text-primary);
       margin-bottom: var(--spacing-md);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .timeline {
+      position: relative;
+      margin-left: 0.5rem;
+      padding-left: 1.5rem;
+      border-left: 2px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .timeline-item {
+      position: relative;
+    }
+
+    .timeline-marker {
+      position: absolute;
+      left: -1.5rem;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--color-bg-primary);
+      border: 2px solid var(--color-primary);
+      top: 0.25rem;
+    }
+
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .timeline-user {
+      font-weight: 600;
+      color: var(--color-text-primary);
+      font-size: 0.875rem;
+    }
+
+    .timeline-time {
+      color: var(--color-text-tertiary);
+      font-size: 0.75rem;
+    }
+
+    .timeline-action {
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .timeline-action strong {
+      color: var(--color-text-primary);
+      font-weight: 600;
     }
 
     .activity-placeholder {
@@ -257,7 +338,9 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
   })
   export class TicketDetailsComponent implements OnInit {
     ticketForm: FormGroup;
+    project = signal<Project | undefined>(undefined);
     ticket = signal<Ticket | undefined>(undefined);
+    activities = signal<TicketActivity[]>([]);
     stages = signal<Stage[]>([]);
     members = signal<User[]>([]);
     isLoading = signal(false);
@@ -271,7 +354,8 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
       private router: Router,
       private fb: FormBuilder,
       private kanbanService: KanbanService,
-      private projectsService: ProjectsService
+      private projectsService: ProjectsService,
+      private popupService: PopupService
     ) {
       this.ticketForm = this.fb.group({
         title: ['', Validators.required],
@@ -289,6 +373,7 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
 
       this.loadProject();
       this.loadTicket();
+      this.loadActivities();
       this.loadMembers();
     }
 
@@ -296,6 +381,7 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
       this.projectsService.getProjectById(this.projectId).subscribe({
         next: (project) => {
           if (project) {
+            this.project.set(project);
             this.stages.set(project.stages);
           }
         }
@@ -316,6 +402,14 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
               priority: ticket.priority
             });
           }
+        }
+      });
+    }
+
+    loadActivities(): void {
+      this.kanbanService.getTicketActivities(this.ticketId).subscribe({
+        next: (activities) => {
+          this.activities.set(activities);
         }
       });
     }
@@ -349,16 +443,30 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // Import TextFieldMo
     }
 
     deleteTicket(): void {
-      if (confirm('Are you sure you want to delete this ticket?')) {
-        this.kanbanService.deleteTicket(this.ticketId).subscribe({
-          next: () => {
-            this.goBack();
-          }
-        });
-      }
+      this.popupService.confirm(
+        'Are you sure you want to delete this ticket?',
+        () => {
+          this.kanbanService.deleteTicket(this.ticketId).subscribe({
+            next: () => {
+              this.popupService.success('Ticket deleted successfully');
+              this.goBack();
+            }
+          });
+        }
+      );
     }
 
     goBack(): void {
       this.router.navigate(['/project', this.projectId]);
+    }
+
+    getStageName(stageId: string): string {
+      const stage = this.stages().find(s => String(s.id) === String(stageId));
+      return stage ? stage.name : 'Unknown Stage';
+    }
+
+    getUserName(userId: string): string {
+      const user = this.members().find(u => String(u.id) === String(userId));
+      return user ? user.fullName : 'Unknown User';
     }
   }

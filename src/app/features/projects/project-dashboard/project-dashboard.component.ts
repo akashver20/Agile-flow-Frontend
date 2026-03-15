@@ -5,6 +5,7 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
 import { CardComponent } from '../../../shared/components/card/card.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { CreateProjectModalComponent } from '../create-project-modal/create-project-modal.component';
+import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { ProjectsService } from '../projects.service';
 import { AuthService } from '../../auth/auth.service';
 import { Project } from '../../../core/models/project.model';
@@ -17,50 +18,29 @@ import { Project } from '../../../core/models/project.model';
     ButtonComponent,
     CardComponent,
     EmptyStateComponent,
-    CreateProjectModalComponent
+    CreateProjectModalComponent,
+    NavbarComponent
   ],
   template: `
     <div class="dashboard">
-      <header class="dashboard-header">
-        <div class="container">
-          <div class="header-content">
-            <div class="header-left">
-              <div class="logo">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <rect width="32" height="32" rx="8" fill="url(#gradient)"/>
-                  <path d="M8 12H24M8 16H24M8 20H16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                  <defs>
-                    <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
-                      <stop stop-color="#6366f1"/>
-                      <stop offset="1" stop-color="#3b82f6"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <span class="logo-text">TaskFlow</span>
-              </div>
-            </div>
-            <div class="header-right">
-              <span class="user-name">{{ currentUser()?.fullName }}</span>
-              <app-button variant="ghost" size="sm" (click)="logout()">
-                Logout
-              </app-button>
-            </div>
-          </div>
+      <app-navbar>
+        <div nav-actions class="nav-user">
+          <span class="user-email">{{ currentUser()?.fullName }}</span>
         </div>
-      </header>
+      </app-navbar>
 
       <main class="dashboard-main">
         <div class="container">
-          <div class="page-header">
+          <div class="page-header animate-fade-in" style="opacity: 0">
             <div>
-              <h1 class="page-title">Projects</h1>
-              <p class="page-subtitle">Manage and organize your projects</p>
+              <h1 class="page-title">My Projects</h1>
+              <p class="page-subtitle">{{ projects().length }} project{{ projects().length !== 1 ? 's' : '' }}</p>
             </div>
             <app-button variant="primary" (click)="openCreateModal()">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Create Project
+              New Project
             </app-button>
           </div>
 
@@ -69,44 +49,37 @@ import { Project } from '../../../core/models/project.model';
             <p>Loading projects...</p>
           </div>
 
-          <div *ngIf="!isLoading() && projects().length === 0">
-            <app-empty-state
-              title="No projects yet"
-              description="Create your first project to get started with organizing your tasks"
-            >
-              <app-button variant="primary" (click)="openCreateModal()">
-                Create Your First Project
-              </app-button>
-            </app-empty-state>
+          <div *ngIf="!isLoading() && projects().length === 0"
+               class="empty-box animate-fade-in-up" style="opacity: 0; animation-delay: 0.2s">
+            <div class="empty-icon-wrap">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+              </svg>
+            </div>
+            <p class="empty-title">No projects yet</p>
+            <p class="empty-desc">Create your first project to get started</p>
+            <app-button variant="primary" (click)="openCreateModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Create Project
+            </app-button>
           </div>
 
           <div *ngIf="!isLoading() && projects().length > 0" class="projects-grid">
-            <app-card
-              *ngFor="let project of projects()"
-              [hoverable]="true"
-              (click)="navigateToProject(project.id)"
-            >
-              <div class="project-card">
-                <h3 class="project-name">{{ project.name }}</h3>
-                <p class="project-description">{{ project.description }}</p>
-                <div class="project-meta">
-                  <div class="meta-item">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.5"/>
-                      <path d="M3 13C3 10.7909 5.23858 9 8 9C10.7614 9 13 10.7909 13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                    <span>{{ project.memberCount }} members</span>
-                  </div>
-                  <div class="meta-item">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="3" y="4" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                      <path d="M5 2V4M11 2V4M3 7H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                    <span>{{ formatDate(project.lastUpdated) }}</span>
-                  </div>
-                </div>
+            <div *ngFor="let project of projects(); let i = index"
+                 class="project-item gradient-card animate-fade-in-up"
+                 [style.animation-delay]="(0.1 * i) + 's'"
+                 style="opacity: 0"
+                 (click)="navigateToProject(project.id)">
+              <div class="project-color-bar" [style.background-color]="getProjectColor(i)"></div>
+              <h3 class="project-name font-display">{{ project.name }}</h3>
+              <p class="project-desc">{{ project.description || 'No description' }}</p>
+              <div class="project-meta">
+                <div class="meta-dot"></div>
+                <span class="meta-text">{{ project.memberCount }} member{{ project.memberCount !== 1 ? 's' : '' }}</span>
               </div>
-            </app-card>
+            </div>
           </div>
         </div>
       </main>
@@ -124,72 +97,40 @@ import { Project } from '../../../core/models/project.model';
       background-color: var(--color-bg-secondary);
     }
 
-    .dashboard-header {
-      background-color: var(--color-bg-primary);
-      border-bottom: 1px solid var(--color-border);
-      padding: var(--spacing-lg) 0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .header-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-xl);
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-    }
-
-    .logo-text {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-bold);
-      color: var(--color-text-primary);
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-    }
-
-    .user-name {
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
-      color: var(--color-text-primary);
-    }
-
     .dashboard-main {
-      padding: var(--spacing-2xl) 0;
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .user-email {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
     }
 
     .page-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: var(--spacing-2xl);
+      margin-bottom: 2rem;
     }
 
     .page-title {
-      font-size: var(--font-size-3xl);
-      font-weight: var(--font-weight-bold);
+      font-size: 1.5rem;
+      font-weight: 700;
       color: var(--color-text-primary);
-      margin-bottom: var(--spacing-xs);
     }
 
     .page-subtitle {
-      font-size: var(--font-size-base);
+      font-size: 0.875rem;
       color: var(--color-text-secondary);
+      margin-top: 0.25rem;
     }
 
     .loading-state {
@@ -197,76 +138,129 @@ import { Project } from '../../../core/models/project.model';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: var(--spacing-3xl);
-      gap: var(--spacing-lg);
+      padding: 4rem;
+      gap: 1rem;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border: 3px solid var(--color-border);
       border-top-color: var(--color-primary);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty State - Project-Pal Style */
+    .empty-box {
+      border: 2px dashed var(--color-border);
+      border-radius: 0.75rem;
+      padding: 5rem 2rem;
+      text-align: center;
     }
 
+    .empty-icon-wrap {
+      display: inline-flex;
+      border-radius: 1rem;
+      background: hsl(234 89% 63% / 0.05);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      color: var(--color-primary);
+    }
+
+    .empty-title {
+      color: var(--color-text-secondary);
+      margin-bottom: 0.25rem;
+      font-size: 1.125rem;
+      font-weight: 500;
+    }
+
+    .empty-desc {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Projects Grid - Project-Pal Style */
     .projects-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: var(--spacing-lg);
+      grid-template-columns: repeat(1, 1fr);
+      gap: 1.25rem;
     }
 
-    .project-card {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-md);
+    @media (min-width: 768px) { .projects-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .projects-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .project-item {
+      border: 1px solid var(--color-border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .project-item:hover {
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-4px);
+    }
+
+    .project-color-bar {
+      height: 0.5rem;
+      width: 3rem;
+      border-radius: 9999px;
+      margin-bottom: 1rem;
     }
 
     .project-name {
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-semibold);
+      font-size: 0.875rem;
+      font-weight: 600;
       color: var(--color-text-primary);
+      margin-bottom: 0.25rem;
+      transition: color 0.2s ease;
     }
 
-    .project-description {
-      font-size: var(--font-size-sm);
+    .project-item:hover .project-name {
+      color: var(--color-primary);
+    }
+
+    .project-desc {
+      font-size: 0.875rem;
       color: var(--color-text-secondary);
       line-height: 1.5;
+      margin-bottom: 0.75rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     .project-meta {
       display: flex;
-      gap: var(--spacing-lg);
-      margin-top: auto;
-      padding-top: var(--spacing-md);
-      border-top: 1px solid var(--color-border);
-    }
-
-    .meta-item {
-      display: flex;
       align-items: center;
-      gap: var(--spacing-xs);
-      font-size: var(--font-size-xs);
-      color: var(--color-text-tertiary);
+      gap: 0.375rem;
     }
 
-    .meta-item svg {
-      color: var(--color-text-tertiary);
+    .meta-dot {
+      width: 0.375rem;
+      height: 0.375rem;
+      border-radius: 50%;
+      background: hsl(234 89% 63% / 0.6);
+    }
+
+    .meta-text {
+      font-size: 0.75rem;
+      color: var(--color-text-secondary);
     }
 
     @media (max-width: 768px) {
       .page-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: var(--spacing-lg);
-      }
-
-      .projects-grid {
-        grid-template-columns: 1fr;
+        gap: 1rem;
       }
     }
   `]
@@ -276,62 +270,40 @@ export class ProjectDashboardComponent implements OnInit {
   isLoading = signal(false);
   isCreateModalOpen = signal(false);
 
+  private projectColors = [
+    'hsl(234 89% 63%)',
+    'hsl(280 68% 60%)',
+    'hsl(152 68% 46%)',
+    'hsl(36 95% 54%)',
+    'hsl(340 75% 60%)',
+    'hsl(190 90% 50%)',
+  ];
+
   constructor(
     private projectsService: ProjectsService,
     private authService: AuthService,
     private router: Router
-  ) { }
+  ) {}
 
-  get currentUser() {
-    return this.authService.currentUser;
-  }
+  get currentUser() { return this.authService.currentUser; }
 
-  ngOnInit(): void {
-    this.loadProjects();
-  }
+  ngOnInit(): void { this.loadProjects(); }
 
   loadProjects(): void {
     this.isLoading.set(true);
     this.projectsService.getProjects().subscribe({
-      next: (projects) => {
-        this.projects.set(projects);
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.isLoading.set(false);
-      }
+      next: (projects) => { this.projects.set(projects); this.isLoading.set(false); },
+      error: () => { this.isLoading.set(false); }
     });
   }
 
-  openCreateModal(): void {
-    this.isCreateModalOpen.set(true);
+  getProjectColor(index: number): string {
+    return this.projectColors[index % this.projectColors.length];
   }
 
-  closeCreateModal(): void {
-    this.isCreateModalOpen.set(false);
-  }
-
-  onProjectCreated(): void {
-    this.closeCreateModal();
-    this.loadProjects();
-  }
-
-  navigateToProject(projectId: string): void {
-    this.router.navigate(['/project', projectId]);
-  }
-
-  logout(): void {
-    this.authService.logout();
-  }
-
-  formatDate(date: Date): string {
-    const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    return new Date(date).toLocaleDateString();
-  }
+  openCreateModal(): void { this.isCreateModalOpen.set(true); }
+  closeCreateModal(): void { this.isCreateModalOpen.set(false); }
+  onProjectCreated(): void { this.closeCreateModal(); this.loadProjects(); }
+  navigateToProject(projectId: string): void { this.router.navigate(['/project', projectId]); }
+  logout(): void { this.authService.logout(); }
 }

@@ -1,139 +1,105 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
-import { BadgeComponent } from '../../../shared/components/badge/badge.component';
 import { Ticket, TicketPriority } from '../../../core/models/ticket.model';
 import { User } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-ticket-card',
   standalone: true,
-  imports: [CommonModule, AvatarComponent, BadgeComponent],
+  imports: [CommonModule, AvatarComponent],
   template: `
-    <div class="ticket-card" [class]="'priority-' + ticket.priority.toLowerCase()">
-      <div class="ticket-header">
-        <h4 class="ticket-title">{{ ticket.title }}</h4>
-        <div class="priority-indicator" [class]="'priority-' + ticket.priority.toLowerCase()"></div>
-      </div>
-      
-
-
-      <div class="ticket-footer">
-        <div class="footer-left">
-          <app-avatar
-            *ngIf="assignee"
-            [name]="assignee.fullName"
-            [src]="assignee.avatar || ''"
-            size="sm"
-          />
-          <span *ngIf="!assignee" class="unassigned">Unassigned</span>
+    <div class="task-card gradient-card">
+      <div class="task-body">
+        <p class="task-title">{{ ticket.title }}</p>
+        <p *ngIf="ticket.description" class="task-desc">{{ ticket.description }}</p>
+        <div class="task-meta">
+          <span class="priority-pill" [class]="'priority-' + ticket.priority.toLowerCase()">
+            {{ ticket.priority.toLowerCase() }}
+          </span>
         </div>
-        <app-badge *ngIf="ticket.storyPoints" variant="gray">
-          {{ ticket.storyPoints }} pts
-        </app-badge>
       </div>
     </div>
   `,
   styles: [`
-    .ticket-card {
-      background-color: var(--color-bg-primary);
+    .task-card {
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      padding: var(--spacing-md);
-      cursor: pointer;
-      transition: all var(--transition-base);
-      border-left: 3px solid transparent;
+      border-radius: 0.5rem;
+      padding: 0.875rem;
+      cursor: grab;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-card);
     }
 
-    .ticket-card:hover {
-      box-shadow: var(--shadow-md);
+    .task-card:active {
+      cursor: grabbing;
+    }
+
+    .task-card:hover {
+      box-shadow: var(--shadow-card-hover);
       transform: translateY(-2px);
     }
 
-    .ticket-card.priority-low {
-      border-left-color: var(--color-priority-low);
-    }
-
-    .ticket-card.priority-medium {
-      border-left-color: var(--color-priority-medium);
-    }
-
-    .ticket-card.priority-high {
-      border-left-color: var(--color-priority-high);
-    }
-
-    .ticket-card.priority-urgent {
-      border-left-color: var(--color-priority-urgent);
-    }
-
-    .ticket-header {
+    .task-body {
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-sm);
+      flex-direction: column;
+      gap: 0.375rem;
     }
 
-    .ticket-title {
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
+    .task-title {
+      font-size: 0.875rem;
+      font-weight: 500;
       color: var(--color-text-primary);
       line-height: 1.4;
-      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .priority-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 4px;
-    }
-
-    .priority-indicator.priority-low {
-      background-color: var(--color-priority-low);
-    }
-
-    .priority-indicator.priority-medium {
-      background-color: var(--color-priority-medium);
-    }
-
-    .priority-indicator.priority-high {
-      background-color: var(--color-priority-high);
-    }
-
-    .priority-indicator.priority-urgent {
-      background-color: var(--color-priority-urgent);
-    }
-
-    .ticket-description {
-      font-size: var(--font-size-xs);
+    .task-desc {
+      font-size: 0.75rem;
       color: var(--color-text-secondary);
-      line-height: 1.4;
-      margin-bottom: var(--spacing-md);
+      line-height: 1.5;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
 
-    .ticket-footer {
+    .task-meta {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: var(--spacing-sm);
+      gap: 0.5rem;
+      margin-top: 0.25rem;
     }
 
-    .footer-left {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-xs);
+    .priority-pill {
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
     }
 
-    .unassigned {
-      font-size: var(--font-size-xs);
-      color: var(--color-text-tertiary);
-      font-style: italic;
+    .priority-low {
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-secondary);
+    }
+
+    .priority-medium {
+      background: hsl(36 95% 54% / 0.15);
+      color: hsl(36 95% 44%);
+    }
+
+    .priority-high {
+      background: hsl(4 76% 56% / 0.15);
+      color: hsl(4 76% 46%);
+    }
+
+    .priority-urgent {
+      background: hsl(4 76% 56% / 0.2);
+      color: hsl(4 76% 40%);
     }
   `]
 })

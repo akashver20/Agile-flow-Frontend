@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { Ticket, CreateTicketData, UpdateTicketData } from '../../core/models/ticket.model';
+import { Ticket, CreateTicketData, UpdateTicketData, TicketActivity } from '../../core/models/ticket.model';
 import { User } from '../../core/models/user.model';
 import { environment } from '../../../environments/environment';
 
@@ -83,6 +83,14 @@ export class KanbanService {
                 role: response.data.projectRole,
                 createdAt: new Date()
             })));
+    }
+
+    getTicketActivities(ticketId: string): Observable<TicketActivity[]> {
+        return this.http.get<{ status: string, data: any[] }>(`${this.apiUrl}/tickets/${ticketId}/activities`)
+            .pipe(map(response => response.data.map(a => ({
+                ...a,
+                createdAt: new Date(a.createdAt)
+            }))));
     }
 }
 

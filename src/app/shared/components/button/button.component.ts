@@ -19,15 +19,16 @@ import { CommonModule } from '@angular/common';
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: var(--spacing-sm);
-      padding: var(--spacing-sm) var(--spacing-lg);
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
-      border-radius: var(--radius-md);
-      transition: all var(--transition-base);
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 0.5rem;
+      transition: all 0.2s ease;
       cursor: pointer;
       border: none;
       outline: none;
+      white-space: nowrap;
     }
 
     .btn:disabled {
@@ -36,25 +37,26 @@ import { CommonModule } from '@angular/common';
     }
 
     .btn-primary {
-      background-color: var(--color-primary);
-      color: var(--color-text-inverse);
+      background: var(--gradient-primary);
+      color: white;
+      border: 0;
+      box-shadow: var(--shadow-glow);
     }
 
     .btn-primary:hover:not(:disabled) {
-      background-color: var(--color-primary-hover);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-md);
+      opacity: 0.9;
+      transform: scale(1.05);
     }
 
     .btn-secondary {
-      background-color: var(--color-bg-tertiary);
+      background-color: var(--color-bg-primary);
       color: var(--color-text-primary);
       border: 1px solid var(--color-border);
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background-color: var(--color-gray-200);
-      border-color: var(--color-border-hover);
+      transform: scale(1.05);
+      box-shadow: var(--shadow-md);
     }
 
     .btn-ghost {
@@ -68,24 +70,24 @@ import { CommonModule } from '@angular/common';
     }
 
     .btn-danger {
-      background-color: var(--color-danger);
-      color: var(--color-text-inverse);
+      background: linear-gradient(135deg, hsl(4 76% 56%), hsl(4 76% 46%));
+      color: white;
     }
 
     .btn-danger:hover:not(:disabled) {
-      background-color: #dc2626;
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-md);
+      opacity: 0.9;
+      transform: scale(1.05);
     }
 
     .btn-sm {
-      padding: var(--spacing-xs) var(--spacing-md);
-      font-size: var(--font-size-xs);
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8125rem;
     }
 
     .btn-lg {
-      padding: var(--spacing-md) var(--spacing-xl);
-      font-size: var(--font-size-base);
+      padding: 0.625rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
     }
   `]
 })

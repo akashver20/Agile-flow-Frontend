@@ -6,17 +6,17 @@ import { CommonModule } from '@angular/common';
     standalone: true,
     imports: [CommonModule],
     template: `
-    <div class="card" [class.hoverable]="hoverable">
+    <div class="card gradient-card" [class.hoverable]="hoverable">
       <ng-content></ng-content>
     </div>
   `,
     styles: [`
     .card {
-      background-color: var(--color-bg-primary);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
+      border-radius: 0.75rem;
       padding: var(--spacing-lg);
-      transition: all var(--transition-base);
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-card);
     }
 
     .card.hoverable {
@@ -24,9 +24,8 @@ import { CommonModule } from '@angular/common';
     }
 
     .card.hoverable:hover {
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-2px);
-      border-color: var(--color-border-hover);
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-4px);
     }
   `]
 })

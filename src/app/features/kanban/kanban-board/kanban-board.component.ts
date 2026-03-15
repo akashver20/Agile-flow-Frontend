@@ -1,16 +1,19 @@
 import { Component, OnInit, signal, effect } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem, CdkDropList } from '@angular/cdk/drag-drop';
+import { DragDropModule, moveItemInArray, transferArrayItem, CdkDropList } from '@angular/cdk/drag-drop';
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { TicketCardComponent } from '../ticket-card/ticket-card.component';
 import { CreateTicketModalComponent } from '../create-ticket-modal/create-ticket-modal.component';
+import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { ProjectsService } from '../../projects/projects.service';
 import { KanbanService } from '../kanban.service';
 import { AuthService } from '../../auth/auth.service';
 import { Project, Stage } from '../../../core/models/project.model';
 import { Ticket } from '../../../core/models/ticket.model';
 import { User } from '../../../core/models/user.model';
+import { PopupService } from '../../../shared/services/popup.service';
 
 interface StageWithTickets extends Stage {
   tickets: Ticket[];
@@ -19,43 +22,31 @@ interface StageWithTickets extends Stage {
 @Component({
   selector: 'app-kanban-board',
   standalone: true,
-  imports: [CommonModule, DragDropModule, ButtonComponent, TicketCardComponent, CreateTicketModalComponent],
+  imports: [CommonModule, DragDropModule, ButtonComponent, TicketCardComponent, CreateTicketModalComponent, NavbarComponent],
   template: `
     <div class="kanban-page">
-      <header class="kanban-header">
-        <div class="container">
-          <div class="header-content">
-            <div class="header-left">
-              <button class="back-btn" (click)="goBack()">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M12 16L6 10L12 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <div>
-                <h1 class="project-name">{{ project()?.name }}</h1>
-                <p class="project-description">{{ project()?.description }}</p>
-              </div>
-            </div>
-            <div class="header-right">
-              <app-button variant="primary" size="sm" (click)="openCreateTicketModal()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Create Ticket
-              </app-button>
-              <app-button variant="secondary" size="sm" (click)="inviteUser()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Invite User
-              </app-button>
-              <app-button variant="ghost" size="sm" (click)="logout()">
-                Logout
-              </app-button>
-            </div>
-          </div>
+      <app-navbar 
+        [project]="project()" 
+        [showBack]="true" 
+        (onBack)="goBack()">
+        
+        <div nav-actions class="nav-actions-group">
+          <app-button variant="primary" size="sm" (click)="openCreateTicketModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Task
+          </app-button>
+          <app-button variant="ghost" size="sm" (click)="inviteUser()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+            Invite
+          </app-button>
         </div>
-      </header>
+      </app-navbar>
 
       <main class="kanban-main">
         <div *ngIf="isLoading()" class="loading-state">
@@ -66,12 +57,18 @@ interface StageWithTickets extends Stage {
         <div *ngIf="!isLoading()" class="board-container">
           <div class="board-scroll">
             <div class="board-columns" cdkDropListGroup>
-              <div *ngFor="let stage of stagesWithTickets(); trackBy: trackByStage" class="board-column">
+              <div *ngFor="let stage of stagesWithTickets(); trackBy: trackByStage; let i = index" 
+                   class="board-column animate-fade-in-up"
+                   [style.animation-delay]="(0.1 * i) + 's'"
+                   style="opacity: 0">
+                <!-- Column header -->
                 <div class="column-header">
-                  <h3 class="column-title">{{ stage.name }}</h3>
+                  <div class="col-dot" [style.background-color]="getColumnDotColor(i)"></div>
+                  <span class="column-title">{{ stage.name }}</span>
                   <span class="column-count">{{ stage.tickets.length }}</span>
                 </div>
 
+                <!-- Tasks area -->
                 <div
                   *ngIf="stage.id"
                   cdkDropList
@@ -79,12 +76,11 @@ interface StageWithTickets extends Stage {
                   [cdkDropListData]="stage.tickets"
                   (cdkDropListDropped)="onDrop($event)"
                   class="tickets-list"
-                >
+                  [style.background-color]="getColumnBgColor(i)">
                   <div
                     *ngFor="let ticket of stage.tickets"
                     cdkDrag
-                    (click)="openTicketDetails(ticket.id)"
-                  >
+                    (click)="openTicketDetails(ticket.id)">
                     <app-ticket-card
                       [ticket]="ticket"
                       [assignee]="getAssignee(ticket.assigneeId)"
@@ -92,7 +88,7 @@ interface StageWithTickets extends Stage {
                   </div>
 
                   <div *ngIf="stage.tickets.length === 0" class="empty-column">
-                    <p>No tickets</p>
+                    No tasks
                   </div>
                 </div>
               </div>
@@ -119,61 +115,10 @@ interface StageWithTickets extends Stage {
       flex-direction: column;
     }
 
-    .kanban-header {
-      background-color: var(--color-bg-primary);
-      border-bottom: 1px solid var(--color-border);
-      padding: var(--spacing-lg) 0;
-      flex-shrink: 0;
-    }
-
-    .header-content {
+    .nav-actions-group {
       display: flex;
+      gap: 0.75rem;
       align-items: center;
-      justify-content: space-between;
-      gap: var(--spacing-lg);
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      flex: 1;
-      min-width: 0;
-    }
-
-    .back-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-md);
-      color: var(--color-text-secondary);
-      transition: all var(--transition-base);
-      flex-shrink: 0;
-    }
-
-    .back-btn:hover {
-      background-color: var(--color-bg-tertiary);
-      color: var(--color-text-primary);
-    }
-
-    .project-name {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-bold);
-      color: var(--color-text-primary);
-      margin-bottom: var(--spacing-xs);
-    }
-
-    .project-description {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-secondary);
-    }
-
-    .header-right {
-      display: flex;
-      gap: var(--spacing-sm);
-      flex-shrink: 0;
     }
 
     .kanban-main {
@@ -186,22 +131,20 @@ interface StageWithTickets extends Stage {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: var(--spacing-3xl);
-      gap: var(--spacing-lg);
+      padding: 4rem;
+      gap: 1rem;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border: 3px solid var(--color-border);
       border-top-color: var(--color-primary);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .board-container {
       height: 100%;
@@ -212,97 +155,95 @@ interface StageWithTickets extends Stage {
       height: 100%;
       overflow-x: auto;
       overflow-y: hidden;
-      padding: var(--spacing-lg) 0;
+      padding: 1.5rem;
     }
 
     .board-columns {
       display: flex;
-      gap: var(--spacing-lg);
-      padding: 0 var(--spacing-lg);
+      gap: 1.25rem;
       min-height: calc(100vh - 120px);
     }
 
     .board-column {
-      flex: 0 0 320px;
+      flex: 1;
       display: flex;
       flex-direction: column;
-      background-color: var(--color-bg-tertiary);
-      border-radius: var(--radius-lg);
-      padding: var(--spacing-md);
-      max-height: calc(100vh - 140px);
+      min-width: 280px;
     }
 
     .column-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--spacing-md);
-      padding-bottom: var(--spacing-sm);
-      border-bottom: 2px solid var(--color-border);
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding: 0 0.25rem;
+    }
+
+    .col-dot {
+      width: 0.625rem;
+      height: 0.625rem;
+      border-radius: 50%;
     }
 
     .column-title {
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-semibold);
+      font-size: 0.875rem;
+      font-weight: 600;
       color: var(--color-text-primary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
 
     .column-count {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 24px;
-      height: 24px;
-      padding: 0 var(--spacing-xs);
-      background-color: var(--color-gray-200);
+      font-size: 0.6875rem;
       color: var(--color-text-secondary);
-      font-size: var(--font-size-xs);
-      font-weight: var(--font-weight-semibold);
-      border-radius: var(--radius-full);
+      background: var(--color-bg-tertiary);
+      border-radius: 9999px;
+      padding: 0.125rem 0.5rem;
+      font-weight: 500;
+      margin-left: auto;
     }
 
     .tickets-list {
       flex: 1;
-      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-sm);
-      min-height: 100px;
+      gap: 0.625rem;
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      min-height: 200px;
+      transition: all 0.2s ease;
     }
 
     .empty-column {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: var(--spacing-xl);
+      height: 6rem;
+      font-size: 0.75rem;
       color: var(--color-text-tertiary);
-      font-size: var(--font-size-sm);
-      font-style: italic;
+      border: 2px dashed var(--color-border);
+      border-radius: 0.5rem;
     }
 
     .cdk-drag-preview {
-      box-shadow: var(--shadow-xl);
-      opacity: 0.9;
+      box-shadow: var(--shadow-card-hover);
+      border-radius: 0.5rem;
+      opacity: 0.95;
+    }
+
+    .cdk-drag-placeholder {
+      opacity: 0.3;
     }
 
     .cdk-drag-animating {
-      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+      transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
     }
 
     .tickets-list.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
-      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+      transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
     }
 
     @media (max-width: 768px) {
-      .header-content {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
       .board-column {
-        flex: 0 0 280px;
+        min-width: 260px;
       }
     }
   `]
@@ -320,7 +261,8 @@ export class KanbanBoardComponent implements OnInit {
     private router: Router,
     private projectsService: ProjectsService,
     private kanbanService: KanbanService,
-    private authService: AuthService
+    private authService: AuthService,
+    private popupService: PopupService
   ) {
     // Debug effect to trace data
     effect(() => {
@@ -388,6 +330,28 @@ export class KanbanBoardComponent implements OnInit {
     return stage.id;
   }
 
+  getColumnDotColor(index: number): string {
+    const colors = [
+      'hsl(228 10% 48%)',   // muted for todo
+      'hsl(234 89% 63%)',   // primary for in-progress
+      'hsl(152 68% 46%)',   // success for done
+      'hsl(36 95% 54%)',    // warning 
+      'hsl(280 68% 60%)',   // accent
+    ];
+    return colors[index % colors.length];
+  }
+
+  getColumnBgColor(index: number): string {
+    const colors = [
+      'hsl(228 16% 93% / 0.4)',    // muted/40
+      'hsl(234 89% 63% / 0.05)',   // primary/5
+      'hsl(152 68% 46% / 0.05)',   // success/5
+      'hsl(36 95% 54% / 0.05)',    // warning/5
+      'hsl(280 68% 60% / 0.05)',   // accent/5
+    ];
+    return colors[index % colors.length];
+  }
+
   onDrop(event: CdkDragDrop<Ticket[]>): void {
     if (event.previousContainer === event.container) {
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
@@ -434,20 +398,24 @@ export class KanbanBoardComponent implements OnInit {
   }
 
   inviteUser(): void {
-    const email = prompt('Enter email address of the user to invite:');
-    if (email && email.trim()) {
-      this.isLoading.set(true);
-      this.kanbanService.inviteUser(this.projectId, { email: email.trim() }).subscribe({
-        next: (user) => {
-          this.members.update(members => [...members, user]);
-          this.isLoading.set(false);
-          alert(`Invited ${user.fullName} successfully!`);
-        },
-        error: (error) => {
-          this.isLoading.set(false);
-          alert(error.error?.message || 'Failed to invite user');
-        }
-      });
-    }
+    this.popupService.prompt(
+      'Invite Team Member',
+      'Enter the email address of the person you want to invite to this project.',
+      'you@example.com',
+      (email: string) => {
+        this.isLoading.set(true);
+        this.kanbanService.inviteUser(this.projectId, { email }).subscribe({
+          next: (user) => {
+            this.members.update(members => [...members, user]);
+            this.isLoading.set(false);
+            this.popupService.success(`Invited ${user.fullName} successfully!`);
+          },
+          error: (error) => {
+            this.isLoading.set(false);
+            this.popupService.error(error.error?.message || 'Failed to invite user');
+          }
+        });
+      }
+    );
   }
 }

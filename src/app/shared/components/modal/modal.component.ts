@@ -7,12 +7,12 @@ import { CommonModule } from '@angular/common';
     imports: [CommonModule],
     template: `
     <div class="modal-backdrop" *ngIf="isOpen" (click)="onBackdropClick()">
-      <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h2 class="modal-title">{{ title }}</h2>
           <button class="modal-close" (click)="close()" aria-label="Close">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
         </div>
@@ -25,61 +25,49 @@ import { CommonModule } from '@angular/common';
     styles: [`
     .modal-backdrop {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
+      inset: 0;
+      background: hsl(230 25% 14% / 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: var(--z-modal);
-      padding: var(--spacing-lg);
-      animation: fadeIn var(--transition-base);
+      padding: 1.5rem;
+      animation: fadeIn 0.15s ease;
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
-    .modal-content {
-      background-color: var(--color-bg-primary);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-xl);
-      max-width: 500px;
+    .modal-dialog {
+      background: var(--color-bg-primary);
+      border: 1px solid var(--color-border);
+      border-radius: 0.75rem;
+      box-shadow: 0 25px 50px -12px hsl(230 25% 14% / 0.25);
+      max-width: 28rem;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
-      animation: slideUp var(--transition-base);
+      animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    @keyframes slideUp {
-      from {
-        transform: translateY(20px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
+    @keyframes scaleIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
 
     .modal-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: var(--spacing-lg);
+      padding: 1.25rem 1.5rem;
       border-bottom: 1px solid var(--color-border);
     }
 
     .modal-title {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-semibold);
+      font-size: 1rem;
+      font-weight: 600;
       color: var(--color-text-primary);
       margin: 0;
     }
@@ -88,20 +76,23 @@ import { CommonModule } from '@angular/common';
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-md);
+      width: 28px;
+      height: 28px;
+      border-radius: 0.375rem;
       color: var(--color-text-secondary);
-      transition: all var(--transition-base);
+      transition: all 0.15s ease;
+      border: none;
+      background: transparent;
+      cursor: pointer;
     }
 
     .modal-close:hover {
-      background-color: var(--color-bg-tertiary);
+      background: var(--color-bg-tertiary);
       color: var(--color-text-primary);
     }
 
     .modal-body {
-      padding: var(--spacing-lg);
+      padding: 1.5rem;
     }
   `]
 })
@@ -110,18 +101,11 @@ export class ModalComponent {
     @Input() title = '';
     @Output() closeModal = new EventEmitter<void>();
 
-    close(): void {
-        this.closeModal.emit();
-    }
-
-    onBackdropClick(): void {
-        this.close();
-    }
+    close(): void { this.closeModal.emit(); }
+    onBackdropClick(): void { this.close(); }
 
     @HostListener('document:keydown.escape')
     onEscapeKey(): void {
-        if (this.isOpen) {
-            this.close();
-        }
+        if (this.isOpen) this.close();
     }
 }
